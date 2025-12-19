@@ -2,6 +2,16 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+@st.cache_data
+def load_data(file):
+    return pd.read_csv(
+        file,
+        parse_dates=["date"],
+        low_memory=False
+    )
+
+df = load_data(file)
+
 
 # ---------------------------------------
 # CONFIGURAZIONE PAGINA
@@ -20,7 +30,7 @@ uploaded_file = st.sidebar.file_uploader(
 )
 
 if uploaded_file is None:
-    st.warning("⬅️ Carica un file CSV per visualizzare il dashboard")
+    st.warning("Carica un file CSV per visualizzare il dashboard")
     st.stop()
 
 # ---------------------------------------
@@ -38,6 +48,10 @@ def load_data(file):
     return df
 
 df = load_data(uploaded_file)
+
+st.success("Dataset caricato correttamente")
+st.write(df.shape)
+
 
 # ---------------------------------------
 # TABS
@@ -122,7 +136,7 @@ with tab1:
     )
 
     # -----------------------------------
-    # d) TOP 10 negozi per vendite in promozione (CORRETTO)
+    # d) TOP 10 negozi per vendite in promozione 
     # -----------------------------------
     st.subheader("Top 10 negozi con maggiori vendite in promozione")
 
