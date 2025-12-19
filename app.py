@@ -4,11 +4,10 @@ import pandas as pd
 import plotly.express as px
 
 # ---------------------------------------
-# CONFIGURAZIONE PAGINA (UNA SOLA VOLTA)
+# CONFIGURAZIONE PAGINA
 # ---------------------------------------
 st.set_page_config(page_title="Dashboard Vendite", layout="wide")
-
-st.title("📊 Dashboard Vendite")
+st.title("📊 Dashboard Vendite – Executive View")
 
 # ---------------------------------------
 # UPLOAD DATASET
@@ -41,28 +40,31 @@ def load_data(file):
 df = load_data(uploaded_file)
 
 # ---------------------------------------
-# TABS PRINCIPALI
+# TABS
 # ---------------------------------------
 tab1, tab2, tab3, tab4 = st.tabs(
     ["🌍 Global Overview", "🏪 Per Negozio", "🌎 Per Stato", "✨ Extra"]
 )
 
 # =======================================
-# TAB 1: OVERVIEW GLOBALE
+# TAB 1: GLOBAL OVERVIEW
 # =======================================
 with tab1:
-    st.header("Overview Globale delle Vendite")
+    st.header("Situazione globale delle vendite")
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Negozi", df["store_nbr"].nunique())
-    col2.metric("Prodotti", df["family"].nunique())
-    col3.metric("Stati", df["state"].nunique())
-    col4.metric("Righe dataset", len(df))
+    col1.metric("Numero negozi", df["store_nbr"].nunique())
+    col2.metric("Numero prodotti", df["family"].nunique())
+    col3.metric("Stati coperti", df["state"].nunique())
+
+    months = sorted(df["date"].dt.to_period("M").unique())
+    col4.metric("Periodo dati", f"{months[0]} → {months[-1]}")
 
     st.markdown("---")
 
-    st.subheader("Top 10 Prodotti più venduti")
-    top_prod = (
+    # Top 10 prodotti più venduti (per volume)
+    st.subheader("Top 10 prodotti più venduti")
+    top_products = (
         df.groupby("family")["sales"]
         .sum()
         .sort_values(ascending=False)
@@ -70,10 +72,11 @@ with tab1:
         .reset_index()
     )
     st.plotly_chart(
-        px.bar(top_prod, x="sales", y="family", orientation="h"),
+        px.bar(top_products, x="sales", y="family", orientation="h"),
         use_container_width=True
     )
 
+    # Distribuzione vendite per negozio
     st.subheader("Distribuzione vendite per negozio")
     sales_store = df.groupby("store_nbr")["sales"].sum().reset_index()
     st.plotly_chart(
@@ -81,11 +84,50 @@ with tab1:
         use_container_width=True
     )
 
+    # Top 10 negozi con vendite in promozione
+    st.subheader("Top 10 negozi per vendite in promozione")
+    promo_store = (
+        df[df["onpromotion"] == 1]
+        .groupby("store_nbr")["sales"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
+    st.plotly_chart(
+        px.bar(promo_store, x="sales", y="store_nbr", orientation="h"),
+        use_container_width=True
+    )
+
+    st.markdown("---")
+
+    # Stagionalità
+    st.subheader("Stagionalità delle vendite")
+
+    dow = df.groupby("day_of_week")["sales"].mean().reset_index()
+    st.plotly_chart(
+        px.bar(dow, x="day_of_week", y="sales",
+               labels={"day_of_week": "Giorno settimana"}),
+        use_container_width=True
+    )
+
+    weekly = df.groupby("week")["sales"].mean().reset_index()
+    st.plotly_chart(
+        px.line(weekly, x="week", y="sales"),
+        use_container_width=True
+    )
+
+    monthly = df.groupby("month")["sales"].mean().reset_index()
+    st.plotly_chart(
+        px.bar(monthly, x="month", y="sales"),
+        use_container_width=True
+    )
+
 # =======================================
-# TAB 2: ANALISI PER NEGOZIO
+# TAB 2: PER NEGOZIO
 # =======================================
 with tab2:
-    st.header("Analisi per Negozio")
+    st.header("Analisi per negozio")
 
     store = st.selectbox(
         "Seleziona negozio",
@@ -96,10 +138,13 @@ with tab2:
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Vendite totali", round(df_store["sales"].sum(), 2))
-    col2.metric("Transazioni", len(df_store))
-    col3.metric("Promo attive", df_store["onpromotion"].sum())
+    col2.metric("Prodotti venduti", df_store["family"].count())
+    col3.metric(
+        "Prodotti venduti in promozione",
+        df_store[df_store["onpromotion"] == 1]["family"].count()
+    )
 
-    st.subheader("Vendite per anno")
+    st.subheader("Vendite totali per anno")
     sales_year = df_store.groupby("year")["sales"].sum().reset_index()
     st.plotly_chart(
         px.bar(sales_year, x="year", y="sales"),
@@ -107,10 +152,10 @@ with tab2:
     )
 
 # =======================================
-# TAB 3: ANALISI PER STATO
+# TAB 3: PER STATO
 # =======================================
 with tab3:
-    st.header("Analisi per Stato")
+    st.header("Analisi per stato")
 
     state = st.selectbox(
         "Seleziona stato",
@@ -119,14 +164,14 @@ with tab3:
 
     df_state = df[df["state"] == state]
 
-    st.subheader("Vendite per anno")
-    sales_year = df_state.groupby("year")["sales"].sum().reset_index()
+    st.subheader("Numero totale di transazioni per anno")
+    trans_year = df_state.groupby("year")["transactions"].sum().reset_index()
     st.plotly_chart(
-        px.bar(sales_year, x="year", y="sales"),
+        px.bar(trans_year, x="year", y="transactions"),
         use_container_width=True
     )
 
-    st.subheader("Top 10 negozi nello stato")
+    st.subheader("Ranking negozi per vendite")
     top_stores = (
         df_state.groupby("store_nbr")["sales"]
         .sum()
@@ -139,13 +184,21 @@ with tab3:
         use_container_width=True
     )
 
+    st.subheader("Prodotto più venduto nello stato")
+    top_product = (
+        df_state.groupby("family")["sales"]
+        .sum()
+        .idxmax()
+    )
+    st.success(f"📦 Prodotto più venduto: **{top_product}**")
+
 # =======================================
-# TAB 4: EXTRA / INSIGHTS
+# TAB 4: EXTRA / SURPRISE
 # =======================================
 with tab4:
-    st.header("Insights aggiuntivi")
+    st.header("Insights avanzati per il management")
 
-    st.subheader("Heatmap vendite medie (mese vs giorno)")
+    st.subheader("Heatmap vendite medie (mese vs giorno settimana)")
     pivot = (
         df.groupby(["month", "day_of_week"])["sales"]
         .mean()
@@ -161,7 +214,7 @@ with tab4:
         use_container_width=True
     )
 
-    st.subheader("Vendite medie: Promo vs No Promo")
+    st.subheader("Confronto vendite medie: Promo vs No Promo")
     promo_cmp = df.groupby("onpromotion")["sales"].mean().reset_index()
     st.plotly_chart(
         px.bar(promo_cmp, x="onpromotion", y="sales"),
