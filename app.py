@@ -96,12 +96,18 @@ with tab1:
 
     st.subheader("Distribuzione delle vendite per negozio")
 
+    sales_by_store = (
+        df.groupby("store_nbr")["sales"]
+        .sum()
+        .reset_index()
+    )
+
     st.plotly_chart(
-        px.box(
-            df,
+        px.bar(
+            sales_by_store,
             x="store_nbr",
             y="sales",
-            labels={"store_nbr": "Negozio", "sales": "Vendite"}
+            labels={"store_nbr": "Negozio", "sales": "Vendite totali"}
         ),
         use_container_width=True
     )
@@ -112,18 +118,17 @@ with tab1:
         df[df["onpromotion"] == 1]
         .groupby("store_nbr")["sales"]
         .sum()
-        .sort_values(ascending=True)
-        .tail(10)
+        .sort_values(ascending=False)
+        .head(10)
         .reset_index()
     )
 
     st.plotly_chart(
         px.bar(
             promo_store,
-            x="sales",
-            y="store_nbr",
-            orientation="h",
-            labels={"sales": "Vendite in promozione", "store_nbr": "Negozio"}
+            x="store_nbr",
+            y="sales",
+            labels={"store_nbr": "Negozio", "sales": "Vendite in promozione"}
         ),
         use_container_width=True
     )
@@ -159,16 +164,12 @@ with tab1:
         use_container_width=True
     )
 
-    # Vendite medie per settimana dell'anno
-    weekly = (
-        df.groupby(["year", "week"])["sales"]
-        .mean()
-        .reset_index()
-    )
+    # Vendite medie per settimana dell'anno (istogramma)
+    weekly_avg = df.groupby("week")["sales"].mean().reset_index()
 
     st.plotly_chart(
-        px.box(
-            weekly,
+        px.bar(
+            weekly_avg,
             x="week",
             y="sales",
             labels={"week": "Settimana dell'anno", "sales": "Vendite medie"}
@@ -176,15 +177,31 @@ with tab1:
         use_container_width=True
     )
 
-    # Vendite medie per mese
+    # Vendite medie per mese (nomi mesi)
+    month_map = {
+        1: "Gennaio",
+        2: "Febbraio",
+        3: "Marzo",
+        4: "Aprile",
+        5: "Maggio",
+        6: "Giugno",
+        7: "Luglio",
+        8: "Agosto",
+        9: "Settembre",
+        10: "Ottobre",
+        11: "Novembre",
+        12: "Dicembre"
+    }
+
     monthly = df.groupby("month")["sales"].mean().reset_index()
+    monthly["month_name"] = monthly["month"].map(month_map)
 
     st.plotly_chart(
         px.bar(
             monthly,
-            x="month",
+            x="month_name",
             y="sales",
-            labels={"month": "Mese", "sales": "Vendite medie"}
+            labels={"month_name": "Mese", "sales": "Vendite medie"}
         ),
         use_container_width=True
     )
