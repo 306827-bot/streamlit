@@ -244,16 +244,27 @@ with tab2:
     col1.metric("Vendite totali", round(df_store["sales"].sum(), 2))
     col2.metric("Prodotti venduti", df_store["family"].count())
     col3.metric(
-        "Prodotti venduti in promozione",
+        "Prodotti in promozione",
         df_store[df_store["onpromotion"] == 1]["family"].count()
     )
 
     st.subheader("Vendite totali per anno")
+
     sales_year = df_store.groupby("year")["sales"].sum().reset_index()
+
     st.plotly_chart(
-        px.bar(sales_year, x="year", y="sales"),
+        px.bar(
+            sales_year,
+            x="year",
+            y="sales",
+            color="sales",
+            color_continuous_scale="Blues",
+            text="sales",
+            labels={"year": "Anno", "sales": "Vendite totali"}
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
+
 
 # =======================================
 # TAB 3: PER STATO
@@ -268,33 +279,90 @@ with tab3:
 
     df_state = df[df["state"] == state]
 
+    # -----------------------------------
+    # a) Numero totale di transazioni per anno
+    # -----------------------------------
     st.subheader("Numero totale di transazioni per anno")
-    trans_year = df_state.groupby("year")["transactions"].sum().reset_index()
+
+    trans_year = (
+        df_state.groupby("year")["transactions"]
+        .sum()
+        .reset_index()
+    )
+
     st.plotly_chart(
-        px.bar(trans_year, x="year", y="transactions"),
+        px.bar(
+            trans_year,
+            x="year",
+            y="transactions",
+            color="transactions",
+            color_continuous_scale="Viridis",
+            text="transactions",
+            labels={
+                "year": "Anno",
+                "transactions": "Numero di transazioni"
+            }
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
 
-    st.subheader("Ranking negozi per vendite")
+    st.markdown("---")
+
+    # -----------------------------------
+    # b) Ranking TOP 10 negozi per vendite
+    # -----------------------------------
+    st.subheader("Top 10 negozi con maggiori vendite nello stato")
+
     top_stores = (
         df_state.groupby("store_nbr")["sales"]
         .sum()
         .sort_values(ascending=False)
         .head(10)
         .reset_index()
+        .sort_values("sales")
     )
+
     st.plotly_chart(
-        px.bar(top_stores, x="sales", y="store_nbr", orientation="h"),
+        px.bar(
+            top_stores,
+            x="sales",
+            y="store_nbr",
+            orientation="h",
+            color="sales",
+            color_continuous_scale="Reds",
+            text="sales",
+            labels={
+                "store_nbr": "Negozio",
+                "sales": "Vendite totali"
+            }
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
 
-    st.subheader("Prodotto più venduto nello stato")
-    top_product = (
-        df_state.groupby("family")["sales"]
+    st.markdown("---")
+
+    # -----------------------------------
+    # c) Prodotto più venduto nel negozio top dello stato
+    # -----------------------------------
+    top_store_state = (
+        df_state.groupby("store_nbr")["sales"]
         .sum()
         .idxmax()
     )
-    st.success(f"📦 Prodotto più venduto: **{top_product}**")
+
+    df_top_store = df_state[df_state["store_nbr"] == top_store_state]
+
+    top_product_store = (
+        df_top_store.groupby("family")["sales"]
+        .sum()
+        .idxmax()
+    )
+
+    st.success(
+        f"🏆 Nello stato **{state}**, il negozio con più vendite è **{top_store_state}**\n\n"
+        f"📦 Il prodotto più venduto in questo negozio è **{top_product_store}**"
+    )
+
 
 # =======================================
 # TAB 4: EXTRA / SURPRISE
