@@ -53,7 +53,7 @@ with tab1:
     st.header("Overview Globale delle Vendite")
 
     # -----------------------------------
-    # a) Conteo general
+    # a) Indicatori chiave
     # -----------------------------------
     col1, col2, col3, col4 = st.columns(4)
 
@@ -71,14 +71,14 @@ with tab1:
     st.markdown("---")
 
     # -----------------------------------
-    # b) Analisi media e ranking
+    # b) Top prodotti
     # -----------------------------------
     st.subheader("Top 10 Prodotti più venduti")
 
     top_products = (
         df.groupby("family")["sales"]
         .sum()
-        .sort_values(ascending=True)
+        .sort_values()
         .tail(10)
         .reset_index()
     )
@@ -89,11 +89,17 @@ with tab1:
             x="sales",
             y="family",
             orientation="h",
+            color="sales",
+            color_continuous_scale="Blues",
+            text="sales",
             labels={"sales": "Vendite totali", "family": "Prodotto"}
-        ),
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
 
+    # -----------------------------------
+    # c) Vendite per negozio
+    # -----------------------------------
     st.subheader("Distribuzione delle vendite per negozio")
 
     sales_by_store = (
@@ -107,40 +113,54 @@ with tab1:
             sales_by_store,
             x="store_nbr",
             y="sales",
+            color="sales",
+            color_continuous_scale="Viridis",
+            text="sales",
             labels={"store_nbr": "Negozio", "sales": "Vendite totali"}
-        ),
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
 
-    st.subheader("Top 10 negozi con vendite in promozione")
+    # -----------------------------------
+    # d) TOP 10 negozi per vendite in promozione (CORRETTO)
+    # -----------------------------------
+    st.subheader("Top 10 negozi con maggiori vendite in promozione")
 
-    promo_store = (
+    promo_sales_store = (
         df[df["onpromotion"] == 1]
         .groupby("store_nbr")["sales"]
         .sum()
         .sort_values(ascending=False)
         .head(10)
         .reset_index()
+        .sort_values("sales")
     )
 
     st.plotly_chart(
         px.bar(
-            promo_store,
-            x="store_nbr",
-            y="sales",
-            labels={"store_nbr": "Negozio", "sales": "Vendite in promozione"}
-        ),
+            promo_sales_store,
+            x="sales",
+            y="store_nbr",
+            orientation="h",
+            color="sales",
+            color_continuous_scale="Reds",
+            text="sales",
+            labels={
+                "store_nbr": "Negozio",
+                "sales": "Vendite in promozione"
+            }
+        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
         use_container_width=True
     )
 
     st.markdown("---")
 
     # -----------------------------------
-    # c) Analisi di stagionalità
+    # e) Stagionalità
     # -----------------------------------
     st.subheader("Stagionalità delle vendite")
 
-    # Giorno della settimana
+    # Giorni della settimana
     day_map = {
         1: "Lunedì",
         2: "Martedì",
@@ -159,12 +179,15 @@ with tab1:
             dow,
             x="day_name",
             y="sales",
+            color="sales",
+            color_continuous_scale="Teal",
+            text="sales",
             labels={"day_name": "Giorno della settimana", "sales": "Vendite medie"}
-        ),
+        ).update_traces(texttemplate="%{text:.1f}", textposition="outside"),
         use_container_width=True
     )
 
-    # Vendite medie per settimana dell'anno (istogramma)
+    # Vendite medie per settimana dell'anno
     weekly_avg = df.groupby("week")["sales"].mean().reset_index()
 
     st.plotly_chart(
@@ -172,25 +195,18 @@ with tab1:
             weekly_avg,
             x="week",
             y="sales",
+            color="sales",
+            color_continuous_scale="Cividis",
             labels={"week": "Settimana dell'anno", "sales": "Vendite medie"}
         ),
         use_container_width=True
     )
 
-    # Vendite medie per mese (nomi mesi)
+    # Vendite medie per mese
     month_map = {
-        1: "Gennaio",
-        2: "Febbraio",
-        3: "Marzo",
-        4: "Aprile",
-        5: "Maggio",
-        6: "Giugno",
-        7: "Luglio",
-        8: "Agosto",
-        9: "Settembre",
-        10: "Ottobre",
-        11: "Novembre",
-        12: "Dicembre"
+        1: "Gennaio", 2: "Febbraio", 3: "Marzo", 4: "Aprile",
+        5: "Maggio", 6: "Giugno", 7: "Luglio", 8: "Agosto",
+        9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
     }
 
     monthly = df.groupby("month")["sales"].mean().reset_index()
@@ -201,10 +217,14 @@ with tab1:
             monthly,
             x="month_name",
             y="sales",
+            color="sales",
+            color_continuous_scale="Plasma",
+            text="sales",
             labels={"month_name": "Mese", "sales": "Vendite medie"}
-        ),
+        ).update_traces(texttemplate="%{text:.1f}", textposition="outside"),
         use_container_width=True
     )
+
 
 
 # =======================================
