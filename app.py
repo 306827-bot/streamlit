@@ -2,15 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-@st.cache_data
-def load_data(file):
-    return pd.read_csv(
-        file,
-        parse_dates=["date"],
-        low_memory=False
-    )
 
-df = load_data(file)
 
 
 # ---------------------------------------
