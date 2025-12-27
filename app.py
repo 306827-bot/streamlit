@@ -1,9 +1,9 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-
-
+import zipfile
+import os
+import tempfile
 
 # ---------------------------------------
 # CONFIGURAZIONE PAGINA
@@ -12,36 +12,44 @@ st.set_page_config(page_title="Dashboard Vendite", layout="wide")
 st.title("📊 Dashboard Vendite – Executive View")
 
 # ---------------------------------------
-# UPLOAD DATASET
-# ---------------------------------------
-st.sidebar.header("Caricamento dati")
-
-uploaded_file = st.sidebar.file_uploader(
-    "Carica il dataset CSV",
-    type=["csv"]
-)
-
-if uploaded_file is None:
-    st.warning("Carica un file CSV per visualizzare il dashboard")
-    st.stop()
-
-# ---------------------------------------
-# CARICAMENTO E PREPROCESSING
+# CARICAMENTO DATASET DA ZIP
 # ---------------------------------------
 @st.cache_data
-def load_data(file):
-    df = pd.read_csv(file, parse_dates=["date"])
+def load_data_from_zip(zip_path):
+    dfs = []
 
+    with zipfile.ZipFile(zip_path, "r") as z:
+        csv_files = [f for f in z.namelist() if f.endswith(".csv")]
+
+        if len(csv_files) == 0:
+            st.error("Nessun file CSV trovato nello ZIP")
+            st.stop()
+
+        for csv_name in csv_files:
+            with z.open(csv_name) as f:
+                df_tmp = pd.read_csv(f, parse_dates=["date"])
+                dfs.append(df_tmp)
+
+    df = pd.concat(dfs, ignore_index=True)
+
+    # Feature engineering (UGUALE al tuo)
     df["year"] = df["date"].dt.year
     df["month"] = df["date"].dt.month
     df["week"] = df["date"].dt.isocalendar().week.astype(int)
-    df["day_of_week"] = df["date"].dt.dayofweek + 1  # 1=Lun ... 7=Dom
+    df["day_of_week"] = df["date"].dt.dayofweek + 1
 
     return df
 
-df = load_data(uploaded_file)
 
-st.success("Dataset caricato correttamente")
+ZIP_PATH = "dataset.zip"
+
+if not os.path.exists(ZIP_PATH):
+    st.error("❌ File dataset.zip non trovato nel repository")
+    st.stop()
+
+df = load_data_from_zip(ZIP_PATH)
+
+st.success("Dataset caricato correttamente dallo ZIP")
 st.write(df.shape)
 
 
