@@ -202,36 +202,45 @@ with tab2:
 # TAB 3: POR ESTADO
 # =======================================
 with tab3:
-    st.header("Análisis por estado")
+    st.subheader("Número total de transacciones por año")
 
-    state = st.selectbox("Selecciona un estado", sorted(df["state"].dropna().unique()))
-    df_state = df[df["state"] == state]
+st.plotly_chart(
+    px.bar(
+        trans_year,
+        x="year",
+        y="transactions",
+        color="transactions",
+        color_continuous_scale="Blues",
+        text=trans_year["transactions"].apply(
+            lambda x: f"{int(x):,}".replace(",", ".")
+        ),
+        labels={
+            "year": "Año",
+            "transactions": "Número de transacciones"
+        }
+    ).update_traces(textposition="outside"),
+    use_container_width=True
+)
+st.subheader("Top 10 tiendas con mayores ventas en el estado")
 
-    trans_year = df_state.groupby("year")["transactions"].sum().reset_index()
-    st.plotly_chart(px.bar(trans_year, x="year", y="transactions"), use_container_width=True)
+st.plotly_chart(
+    px.bar(
+        top_stores,
+        x="store_nbr",
+        y="sales",
+        color="sales",
+        color_continuous_scale="Reds",
+        text=top_stores["sales"].apply(
+            lambda x: f"{int(x):,}".replace(",", ".")
+        ),
+        labels={
+            "store_nbr": "Tienda",
+            "sales": "Ventas totales"
+        }
+    ).update_traces(textposition="outside"),
+    use_container_width=True
+)
 
-    top_stores = (
-        df_state.groupby("store_nbr")["sales"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-        .reset_index()
-    )
-
-    st.plotly_chart(px.bar(top_stores, x="store_nbr", y="sales"), use_container_width=True)
-
-    top_store = top_stores.iloc[0]["store_nbr"]
-    top_product = (
-        df_state[df_state["store_nbr"] == top_store]
-        .groupby("family")["sales"]
-        .sum()
-        .idxmax()
-    )
-
-    st.info(
-        f"En el estado **{state}**, la tienda con mayores ventas es **{top_store}**.\n\n"
-        f"El producto más vendido en esta tienda es **{top_product}**."
-    )
 
 # =======================================
 # TAB 4: EXTRA
@@ -243,5 +252,36 @@ with tab4:
     heat = pivot.pivot(index="day_of_week", columns="month", values="sales")
     st.plotly_chart(px.imshow(heat, aspect="auto"), use_container_width=True)
 
-    promo_cmp = df.groupby("onpromotion")["sales"].mean().reset_index()
-    st.plotly_chart(px.bar(promo_cmp, x="onpromotion", y="sales"), use_container_width=True)
+    st.subheader("Impacto de las promociones a lo largo del año")
+
+promo_month = (
+    df.groupby(["month", "onpromotion"])["sales"]
+    .mean()
+    .reset_index()
+)
+
+promo_month["Tipo"] = promo_month["onpromotion"].map({
+    1: "Con promoción",
+    0: "Sin promoción"
+})
+
+promo_month["Mes"] = promo_month["month"].map(month_map)
+
+st.plotly_chart(
+    px.line(
+        promo_month,
+        x="Mes",
+        y="sales",
+        color="Tipo",
+        markers=True,
+        labels={
+            "sales": "Ventas medias",
+            "Mes": "Mes del año"
+        }
+    ),
+    use_container_width=True
+)
+
+
+
+
