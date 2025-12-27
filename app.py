@@ -3,16 +3,15 @@ import pandas as pd
 import plotly.express as px
 import zipfile
 import os
-import tempfile
 
 # ---------------------------------------
-# CONFIGURAZIONE PAGINA
+# CONFIGURACIÓN DE PÁGINA
 # ---------------------------------------
-st.set_page_config(page_title="Dashboard Vendite", layout="wide")
-st.title("📊 Dashboard Vendite – Executive View")
+st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
+st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
-# CARICAMENTO DATASET DA ZIP
+# CARGA DATASET DESDE ZIP
 # ---------------------------------------
 @st.cache_data
 def load_data_from_zip(zip_path):
@@ -22,7 +21,7 @@ def load_data_from_zip(zip_path):
         csv_files = [f for f in z.namelist() if f.endswith(".csv")]
 
         if len(csv_files) == 0:
-            st.error("Nessun file CSV trovato nello ZIP")
+            st.error("No se encontró ningún archivo CSV dentro del ZIP")
             st.stop()
 
         for csv_name in csv_files:
@@ -32,7 +31,6 @@ def load_data_from_zip(zip_path):
 
     df = pd.concat(dfs, ignore_index=True)
 
-    # Feature engineering (UGUALE al tuo)
     df["year"] = df["date"].dt.year
     df["month"] = df["date"].dt.month
     df["week"] = df["date"].dt.isocalendar().week.astype(int)
@@ -44,50 +42,44 @@ def load_data_from_zip(zip_path):
 ZIP_PATH = "dataset.zip"
 
 if not os.path.exists(ZIP_PATH):
-    st.error("❌ File dataset.zip non trovato nel repository")
+    st.error("❌ El archivo dataset.zip no se encuentra en el repositorio")
     st.stop()
 
 df = load_data_from_zip(ZIP_PATH)
 
-st.success("Dataset caricato correttamente dallo ZIP")
+st.success("Dataset cargado correctamente desde el archivo ZIP")
 st.write(df.shape)
-
 
 # ---------------------------------------
 # TABS
 # ---------------------------------------
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["🌍 Global Overview", "🏪 Per Negozio", "🌎 Per Stato", "✨ Extra"]
+    ["🌍 Visión Global", "🏪 Por Tienda", "🌎 Por Estado", "✨ Extra"]
 )
 
 # =======================================
-# TAB 1: OVERVIEW GLOBALE
+# TAB 1: VISIÓN GLOBAL
 # =======================================
 with tab1:
-    st.header("Overview Globale delle Vendite")
+    st.header("Visión global de las ventas")
 
-    # -----------------------------------
-    # a) Indicatori chiave
-    # -----------------------------------
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Numero totale negozi", df["store_nbr"].nunique())
-    col2.metric("Numero totale prodotti", df["family"].nunique())
-    col3.metric("Stati coperti", df["state"].nunique())
+    col1.metric("Número total de tiendas", f"{df['store_nbr'].nunique():,}".replace(",", "."))
+    col2.metric("Número total de productos", f"{df['family'].nunique():,}".replace(",", "."))
+    col3.metric("Estados cubiertos", f"{df['state'].nunique():,}".replace(",", "."))
 
     months = df["date"].dt.to_period("M")
     col4.metric(
-        "Periodo analizzato",
-        f"{months.nunique()} mesi",
+        "Periodo analizado",
+        f"{months.nunique():,}".replace(",", ".") + " meses",
         f"{months.min()} → {months.max()}"
     )
 
     st.markdown("---")
 
-    # -----------------------------------
-    # b) Top prodotti
-    # -----------------------------------
-    st.subheader("Top 10 Prodotti più venduti")
+    # Top productos
+    st.subheader("Top 10 productos más vendidos")
 
     top_products = (
         df.groupby("family")["sales"]
@@ -105,22 +97,15 @@ with tab1:
             orientation="h",
             color="sales",
             color_continuous_scale="Blues",
-            text="sales",
-            labels={"sales": "Vendite totali", "family": "Prodotto"}
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
+            text=top_products["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+        ),
         use_container_width=True
     )
 
-    # -----------------------------------
-    # c) Vendite per negozio
-    # -----------------------------------
-    st.subheader("Distribuzione delle vendite per negozio")
+    # Ventas por tienda
+    st.subheader("Distribución de ventas por tienda")
 
-    sales_by_store = (
-        df.groupby("store_nbr")["sales"]
-        .sum()
-        .reset_index()
-    )
+    sales_by_store = df.groupby("store_nbr")["sales"].sum().reset_index()
 
     st.plotly_chart(
         px.bar(
@@ -129,16 +114,13 @@ with tab1:
             y="sales",
             color="sales",
             color_continuous_scale="Viridis",
-            text="sales",
-            labels={"store_nbr": "Negozio", "sales": "Vendite totali"}
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
+            text=sales_by_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+        ),
         use_container_width=True
     )
 
-    # -----------------------------------
-    # d) TOP 10 negozi per vendite in promozione 
-    # -----------------------------------
-    st.subheader("Top 10 negozi con maggiori vendite in promozione")
+    # PROMOCIONES – CAMBIO A BARRAS VERTICALES
+    st.subheader("Top 10 tiendas con mayores ventas en promoción")
 
     promo_sales_store = (
         df[df["onpromotion"] == 1]
@@ -147,42 +129,28 @@ with tab1:
         .sort_values(ascending=False)
         .head(10)
         .reset_index()
-        .sort_values("sales")
     )
 
     st.plotly_chart(
         px.bar(
             promo_sales_store,
-            x="sales",
-            y="store_nbr",
-            orientation="h",
+            x="store_nbr",
+            y="sales",
             color="sales",
             color_continuous_scale="Reds",
-            text="sales",
-            labels={
-                "store_nbr": "Negozio",
-                "sales": "Vendite in promozione"
-            }
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
+            text=promo_sales_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+        ),
         use_container_width=True
     )
 
     st.markdown("---")
 
-    # -----------------------------------
-    # e) Stagionalità
-    # -----------------------------------
-    st.subheader("Stagionalità delle vendite")
+    # Estacionalidad
+    st.subheader("Estacionalidad de las ventas")
 
-    # Giorni della settimana
     day_map = {
-        1: "Lunedì",
-        2: "Martedì",
-        3: "Mercoledì",
-        4: "Giovedì",
-        5: "Venerdì",
-        6: "Sabato",
-        7: "Domenica"
+        1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves",
+        5: "Viernes", 6: "Sábado", 7: "Domingo"
     }
 
     dow = df.groupby("day_of_week")["sales"].mean().reset_index()
@@ -194,138 +162,53 @@ with tab1:
             x="day_name",
             y="sales",
             color="sales",
-            color_continuous_scale="Teal",
-            text="sales",
-            labels={"day_name": "Giorno della settimana", "sales": "Vendite medie"}
-        ).update_traces(texttemplate="%{text:.1f}", textposition="outside"),
-        use_container_width=True
-    )
-
-    # Vendite medie per settimana dell'anno
-    weekly_avg = df.groupby("week")["sales"].mean().reset_index()
-
-    st.plotly_chart(
-        px.bar(
-            weekly_avg,
-            x="week",
-            y="sales",
-            color="sales",
-            color_continuous_scale="Cividis",
-            labels={"week": "Settimana dell'anno", "sales": "Vendite medie"}
+            text=dow["sales"].apply(lambda x: f"{x:,.1f}".replace(",", "."))
         ),
         use_container_width=True
     )
 
-    # Vendite medie per mese
+    weekly_avg = df.groupby("week")["sales"].mean().reset_index()
+    st.plotly_chart(px.bar(weekly_avg, x="week", y="sales"), use_container_width=True)
+
     month_map = {
-        1: "Gennaio", 2: "Febbraio", 3: "Marzo", 4: "Aprile",
-        5: "Maggio", 6: "Giugno", 7: "Luglio", 8: "Agosto",
-        9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
+        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
     }
 
     monthly = df.groupby("month")["sales"].mean().reset_index()
     monthly["month_name"] = monthly["month"].map(month_map)
 
-    st.plotly_chart(
-        px.bar(
-            monthly,
-            x="month_name",
-            y="sales",
-            color="sales",
-            color_continuous_scale="Plasma",
-            text="sales",
-            labels={"month_name": "Mese", "sales": "Vendite medie"}
-        ).update_traces(texttemplate="%{text:.1f}", textposition="outside"),
-        use_container_width=True
-    )
-
-
+    st.plotly_chart(px.bar(monthly, x="month_name", y="sales"), use_container_width=True)
 
 # =======================================
-# TAB 2: PER NEGOZIO
+# TAB 2: POR TIENDA
 # =======================================
 with tab2:
-    st.header("Analisi per negozio")
+    st.header("Análisis por tienda")
 
-    store = st.selectbox(
-        "Seleziona negozio",
-        sorted(df["store_nbr"].unique())
-    )
-
+    store = st.selectbox("Selecciona una tienda", sorted(df["store_nbr"].unique()))
     df_store = df[df["store_nbr"] == store]
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Vendite totali", round(df_store["sales"].sum(), 2))
-    col2.metric("Prodotti venduti", df_store["family"].count())
-    col3.metric(
-        "Prodotti in promozione",
-        df_store[df_store["onpromotion"] == 1]["family"].count()
-    )
-
-    st.subheader("Vendite totali per anno")
+    col1.metric("Ventas totales", f"{df_store['sales'].sum():,.0f}".replace(",", "."))
+    col2.metric("Productos vendidos", f"{len(df_store):,}".replace(",", "."))
+    col3.metric("Productos en promoción", f"{df_store[df_store['onpromotion']==1].shape[0]:,}".replace(",", "."))
 
     sales_year = df_store.groupby("year")["sales"].sum().reset_index()
-
-    st.plotly_chart(
-        px.bar(
-            sales_year,
-            x="year",
-            y="sales",
-            color="sales",
-            color_continuous_scale="Blues",
-            text="sales",
-            labels={"year": "Anno", "sales": "Vendite totali"}
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
-        use_container_width=True
-    )
-
+    st.plotly_chart(px.bar(sales_year, x="year", y="sales"), use_container_width=True)
 
 # =======================================
-# TAB 3: PER STATO
+# TAB 3: POR ESTADO
 # =======================================
 with tab3:
-    st.header("Analisi per stato")
+    st.header("Análisis por estado")
 
-    state = st.selectbox(
-        "Seleziona stato",
-        sorted(df["state"].dropna().unique())
-    )
-
+    state = st.selectbox("Selecciona un estado", sorted(df["state"].dropna().unique()))
     df_state = df[df["state"] == state]
 
-    # -----------------------------------
-    # a) Numero totale di transazioni per anno
-    # -----------------------------------
-    st.subheader("Numero totale di transazioni per anno")
-
-    trans_year = (
-        df_state.groupby("year")["transactions"]
-        .sum()
-        .reset_index()
-    )
-
-    st.plotly_chart(
-        px.bar(
-            trans_year,
-            x="year",
-            y="transactions",
-            color="transactions",
-            color_continuous_scale="Viridis",
-            text="transactions",
-            labels={
-                "year": "Anno",
-                "transactions": "Numero di transazioni"
-            }
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
-        use_container_width=True
-    )
-
-    st.markdown("---")
-
-    # -----------------------------------
-    # b) Ranking TOP 10 negozi per vendite
-    # -----------------------------------
-    st.subheader("Top 10 negozi con maggiori vendite nello stato")
+    trans_year = df_state.groupby("year")["transactions"].sum().reset_index()
+    st.plotly_chart(px.bar(trans_year, x="year", y="transactions"), use_container_width=True)
 
     top_stores = (
         df_state.groupby("store_nbr")["sales"]
@@ -333,78 +216,32 @@ with tab3:
         .sort_values(ascending=False)
         .head(10)
         .reset_index()
-        .sort_values("sales")
     )
 
-    st.plotly_chart(
-        px.bar(
-            top_stores,
-            x="sales",
-            y="store_nbr",
-            orientation="h",
-            color="sales",
-            color_continuous_scale="Reds",
-            text="sales",
-            labels={
-                "store_nbr": "Negozio",
-                "sales": "Vendite totali"
-            }
-        ).update_traces(texttemplate="%{text:.0f}", textposition="outside"),
-        use_container_width=True
-    )
+    st.plotly_chart(px.bar(top_stores, x="store_nbr", y="sales"), use_container_width=True)
 
-    st.markdown("---")
-
-    # -----------------------------------
-    # c) Prodotto più venduto nel negozio top dello stato
-    # -----------------------------------
-    top_store_state = (
-        df_state.groupby("store_nbr")["sales"]
+    top_store = top_stores.iloc[0]["store_nbr"]
+    top_product = (
+        df_state[df_state["store_nbr"] == top_store]
+        .groupby("family")["sales"]
         .sum()
         .idxmax()
     )
 
-    df_top_store = df_state[df_state["store_nbr"] == top_store_state]
-
-    top_product_store = (
-        df_top_store.groupby("family")["sales"]
-        .sum()
-        .idxmax()
+    st.info(
+        f"En el estado **{state}**, la tienda con mayores ventas es **{top_store}**.\n\n"
+        f"El producto más vendido en esta tienda es **{top_product}**."
     )
-
-    st.success(
-        f"🏆 Nello stato **{state}**, il negozio con più vendite è **{top_store_state}**\n\n"
-        f"📦 Il prodotto più venduto in questo negozio è **{top_product_store}**"
-    )
-
 
 # =======================================
-# TAB 4: EXTRA / SURPRISE
+# TAB 4: EXTRA
 # =======================================
 with tab4:
-    st.header("Insights avanzati per il management")
+    st.header("Análisis adicional")
 
-    st.subheader("Heatmap vendite medie (mese vs giorno settimana)")
-    pivot = (
-        df.groupby(["month", "day_of_week"])["sales"]
-        .mean()
-        .reset_index()
-    )
-    heat = pivot.pivot(
-        index="day_of_week",
-        columns="month",
-        values="sales"
-    )
-    st.plotly_chart(
-        px.imshow(heat, aspect="auto"),
-        use_container_width=True
-    )
+    pivot = df.groupby(["month", "day_of_week"])["sales"].mean().reset_index()
+    heat = pivot.pivot(index="day_of_week", columns="month", values="sales")
+    st.plotly_chart(px.imshow(heat, aspect="auto"), use_container_width=True)
 
-    st.subheader("Confronto vendite medie: Promo vs No Promo")
     promo_cmp = df.groupby("onpromotion")["sales"].mean().reset_index()
-    st.plotly_chart(
-        px.bar(promo_cmp, x="onpromotion", y="sales"),
-        use_container_width=True
-    )
-
-    st.success("Dashboard pronta per il CEO 🚀")
+    st.plotly_chart(px.bar(promo_cmp, x="onpromotion", y="sales"), use_container_width=True)
