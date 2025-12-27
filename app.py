@@ -202,17 +202,31 @@ with tab2:
 # TAB 3: POR ESTADO
 # =======================================
 with tab3:
-    st.header(f"Análisis por estado: {state}")
+    st.header("Análisis por estado")
+
+    # Selezione stato (QUESTO MANCAVA)
+    state = st.selectbox(
+        "Selecciona un estado",
+        sorted(df["state"].dropna().unique())
+    )
+
+    df_state = df[df["state"] == state]
 
     st.info(
         "ℹ️ Algunos estados presentan menos datos debido a la cobertura "
-        "del dataset original, no a errores de procesamiento."
+        "del dataset original."
     )
 
     # -------------------------------
     # Transacciones por año
     # -------------------------------
-    st.subheader("Evolución anual de las transacciones")
+    trans_year = (
+        df_state.groupby("year")["transactions"]
+        .sum()
+        .reset_index()
+    )
+
+    st.subheader(f"Evolución anual de las transacciones – {state}")
 
     st.plotly_chart(
         px.bar(
@@ -229,8 +243,7 @@ with tab3:
                 "transactions": "Número de transacciones"
             }
         ).update_layout(
-            bargap=0.25,
-            title_x=0.5
+            bargap=0.25
         ).update_traces(
             textposition="outside"
         ),
@@ -242,6 +255,14 @@ with tab3:
     # -------------------------------
     # Top 10 tiendas
     # -------------------------------
+    top_stores = (
+        df_state.groupby("store_nbr")["sales"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
+
     st.subheader("Top 10 tiendas con mayores ventas en el estado")
 
     st.plotly_chart(
@@ -260,13 +281,13 @@ with tab3:
             }
         ).update_layout(
             bargap=0.35,
-            xaxis_tickangle=-45,
-            title_x=0.5
+            xaxis_tickangle=-45
         ).update_traces(
             textposition="outside"
         ),
         use_container_width=True
     )
+
 
 
 # =======================================
