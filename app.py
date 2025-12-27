@@ -202,85 +202,109 @@ with tab2:
 # TAB 3: POR ESTADO
 # =======================================
 with tab3:
-    st.subheader("Número total de transacciones por año")
+    st.header(f"Análisis por estado: {state}")
 
-st.plotly_chart(
-    px.bar(
-        trans_year,
-        x="year",
-        y="transactions",
-        color="transactions",
-        color_continuous_scale="Blues",
-        text=trans_year["transactions"].apply(
-            lambda x: f"{int(x):,}".replace(",", ".")
-        ),
-        labels={
-            "year": "Año",
-            "transactions": "Número de transacciones"
-        }
-    ).update_traces(textposition="outside"),
-    use_container_width=True
-)
-st.subheader("Top 10 tiendas con mayores ventas en el estado")
+    st.info(
+        "ℹ️ Algunos estados presentan menos datos debido a la cobertura "
+        "del dataset original, no a errores de procesamiento."
+    )
 
-st.plotly_chart(
-    px.bar(
-        top_stores,
-        x="store_nbr",
-        y="sales",
-        color="sales",
-        color_continuous_scale="Reds",
-        text=top_stores["sales"].apply(
-            lambda x: f"{int(x):,}".replace(",", ".")
+    # -------------------------------
+    # Transacciones por año
+    # -------------------------------
+    st.subheader("Evolución anual de las transacciones")
+
+    st.plotly_chart(
+        px.bar(
+            trans_year,
+            x="year",
+            y="transactions",
+            color="transactions",
+            color_continuous_scale="Teal",
+            text=trans_year["transactions"].apply(
+                lambda x: f"{int(x):,}".replace(",", ".")
+            ),
+            labels={
+                "year": "Año",
+                "transactions": "Número de transacciones"
+            }
+        ).update_layout(
+            bargap=0.25,
+            title_x=0.5
+        ).update_traces(
+            textposition="outside"
         ),
-        labels={
-            "store_nbr": "Tienda",
-            "sales": "Ventas totales"
-        }
-    ).update_traces(textposition="outside"),
-    use_container_width=True
-)
+        use_container_width=True
+    )
+
+    st.markdown("---")
+
+    # -------------------------------
+    # Top 10 tiendas
+    # -------------------------------
+    st.subheader("Top 10 tiendas con mayores ventas en el estado")
+
+    st.plotly_chart(
+        px.bar(
+            top_stores,
+            x="store_nbr",
+            y="sales",
+            color="sales",
+            color_continuous_scale="OrRd",
+            text=top_stores["sales"].apply(
+                lambda x: f"{int(x):,}".replace(",", ".")
+            ),
+            labels={
+                "store_nbr": "Tienda",
+                "sales": "Ventas totales"
+            }
+        ).update_layout(
+            bargap=0.35,
+            xaxis_tickangle=-45,
+            title_x=0.5
+        ).update_traces(
+            textposition="outside"
+        ),
+        use_container_width=True
+    )
 
 
 # =======================================
 # TAB 4: EXTRA
 # =======================================
 with tab4:
-    st.header("Análisis adicional")
+    st.header("Patrones de venta: visión avanzada")
 
-    pivot = df.groupby(["month", "day_of_week"])["sales"].mean().reset_index()
-    heat = pivot.pivot(index="day_of_week", columns="month", values="sales")
-    st.plotly_chart(px.imshow(heat, aspect="auto"), use_container_width=True)
+    st.subheader("Mapa de calor: ventas medias por día y mes")
 
-    st.subheader("Impacto de las promociones a lo largo del año")
+    pivot = (
+        df.groupby(["month", "day_of_week"])["sales"]
+        .mean()
+        .reset_index()
+    )
 
-promo_month = (
-    df.groupby(["month", "onpromotion"])["sales"]
-    .mean()
-    .reset_index()
-)
+    pivot["Mes"] = pivot["month"].map(month_map)
+    pivot["Día"] = pivot["day_of_week"].map(day_map)
 
-promo_month["Tipo"] = promo_month["onpromotion"].map({
-    1: "Con promoción",
-    0: "Sin promoción"
-})
+    heat = pivot.pivot(
+        index="Día",
+        columns="Mes",
+        values="sales"
+    )
 
-promo_month["Mes"] = promo_month["month"].map(month_map)
-
-st.plotly_chart(
-    px.line(
-        promo_month,
-        x="Mes",
-        y="sales",
-        color="Tipo",
-        markers=True,
-        labels={
-            "sales": "Ventas medias",
-            "Mes": "Mes del año"
-        }
-    ),
-    use_container_width=True
-)
+    st.plotly_chart(
+        px.imshow(
+            heat,
+            aspect="auto",
+            color_continuous_scale="Turbo",
+            labels=dict(
+                x="Mes",
+                y="Día de la semana",
+                color="Ventas medias"
+            )
+        ),
+        use_container_width=True
+    )
 
 
 
