@@ -11,8 +11,11 @@ st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
 st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
-# CARGA DATASET DESDE ZIP
+# CARGA DATASET DESDE ZIP (PARTE 1 + PARTE 2)
 # ---------------------------------------
+import zipfile
+import os
+
 @st.cache_data
 def load_data_from_zip(zip_path):
     dfs = []
@@ -21,7 +24,7 @@ def load_data_from_zip(zip_path):
         csv_files = [f for f in z.namelist() if f.endswith(".csv")]
 
         if len(csv_files) == 0:
-            st.error("No se encontró ningún archivo CSV dentro del ZIP")
+            st.error(f"No se encontró ningún archivo CSV dentro de {zip_path}")
             st.stop()
 
         for csv_name in csv_files:
@@ -39,16 +42,24 @@ def load_data_from_zip(zip_path):
     return df
 
 
-ZIP_PATH = "dataset.zip"
+ZIP_PARTE_1 = "data/parte_1.zip"
+ZIP_PARTE_2 = "data/parte_2.zip"
 
-if not os.path.exists(ZIP_PATH):
-    st.error("❌ El archivo dataset.zip no se encuentra en el repositorio")
-    st.stop()
+# Controllo esistenza ZIP
+for zip_path in [ZIP_PARTE_1, ZIP_PARTE_2]:
+    if not os.path.exists(zip_path):
+        st.error(f"❌ El archivo {zip_path} no se encuentra en el repositorio")
+        st.stop()
 
-df = load_data_from_zip(ZIP_PATH)
+# Caricamento dataset
+df_parte_1 = load_data_from_zip(ZIP_PARTE_1)
+df_parte_2 = load_data_from_zip(ZIP_PARTE_2)
 
-st.success("Dataset cargado correctamente desde el archivo ZIP")
-st.write(df.shape)
+# Merge finale
+df = pd.concat([df_parte_1, df_parte_2], ignore_index=True)
+
+st.success("✅ Dataset parte_1 y parte_2 cargados correctamente")
+st.write("Dimensión total del dataset:", df.shape)
 
 # ---------------------------------------
 # TABS
