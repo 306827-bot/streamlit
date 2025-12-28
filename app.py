@@ -8,12 +8,12 @@ import os
 # CONFIGURACIÓN DE PÁGINA
 # ---------------------------------------
 st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
-st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
+st.title(" Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
 # CARGA DATASET DESDE DOS ZIP
 # ---------------------------------------
-@st.cache_data(show_spinner="Cargando datos...")
+@st.cache_data
 def load_and_merge_zips(zip_paths):
     dfs = []
 
@@ -32,6 +32,18 @@ def load_and_merge_zips(zip_paths):
 
     df = pd.concat(dfs, ignore_index=True)
 
+    df = df[
+        [
+            "date",
+            "store_nbr",
+            "state",
+            "family",
+            "sales",
+            "onpromotion",
+            "transactions",
+        ]
+    ]
+
     # Limpieza mínima
     df["onpromotion"] = df["onpromotion"].fillna(0)
     df["transactions"] = df["transactions"].fillna(0)
@@ -49,13 +61,10 @@ ZIP_FILES = ["parte_1.zip", "parte_2.zip"]
 
 for z in ZIP_FILES:
     if not os.path.exists(z):
-        st.error(f"❌ No se encuentra {z} en el repositorio")
+        st.error(f" No se encuentra {z} en el repositorio")
         st.stop()
 
 df = load_and_merge_zips(ZIP_FILES)
-
-st.success("✅ Datos cargados correctamente")
-st.write("Tamaño del dataset:", df.shape)
 
 # ---------------------------------------
 # TABS
