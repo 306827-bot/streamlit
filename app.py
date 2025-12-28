@@ -11,11 +11,8 @@ st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
 st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
-# CARGA DATASET DESDE DOS ZIP (OPTIMIZADO)
+# CARGA DATASET DESDE DOS ZIP (SIMPLE Y ROBUSTO)
 # ---------------------------------------
-import zipfile
-import os
-
 @st.cache_data(show_spinner="Cargando datos...")
 def load_and_merge_zips(zip_paths):
     dfs = []
@@ -30,39 +27,23 @@ def load_and_merge_zips(zip_paths):
 
             for csv_name in csv_files:
                 with z.open(csv_name) as f:
-                    df_tmp = pd.read_csv(
-                        f,
-                        parse_dates=["date"],
-                        low_memory=False
-                    )
+                    df_tmp = pd.read_csv(f, parse_dates=["date"])
                     dfs.append(df_tmp)
 
     df = pd.concat(dfs, ignore_index=True)
 
-    # 🔥 RIDUZIONE MEMORIA (SAFE)
-df["store_nbr"] = (
-    pd.to_numeric(df["store_nbr"], errors="coerce")
-    .fillna(0)
-    .astype("int16")
-)
+    # Limpieza mínima (SIN cast a int)
+    df["onpromotion"] = df["onpromotion"].fillna(0)
+    df["transactions"] = df["transactions"].fillna(0)
 
-df["onpromotion"] = (
-    pd.to_numeric(df["onpromotion"], errors="coerce")
-    .fillna(0)
-    .astype("int8")
-)
+    # Variables temporales
+    df["year"] = df["date"].dt.year
+    df["month"] = df["date"].dt.month
+    df["week"] = df["date"].dt.isocalendar().week.astype(int)
+    df["day_of_week"] = df["date"].dt.dayofweek + 1
 
-df["sales"] = (
-    pd.to_numeric(df["sales"], errors="coerce")
-    .fillna(0)
-    .astype("float32")
-)
+    return df
 
-df["transactions"] = (
-    pd.to_numeric(df["transactions"], errors="coerce")
-    .fillna(0)
-    .astype("int32")
-)
 
 ZIP_FILES = ["parte_1.zip", "parte_2.zip"]
 
@@ -75,6 +56,7 @@ df = load_and_merge_zips(ZIP_FILES)
 
 st.success("✅ Datos cargados correctamente")
 st.write("Tamaño del dataset:", df.shape)
+
 
 # ---------------------------------------
 # TABS
