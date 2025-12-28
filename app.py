@@ -11,57 +11,60 @@ st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
 st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
-# CARGA DATASET DESDE ZIP (PARTE 1 + PARTE 2)
+# CARGA DATASET DESDE DOS ZIP (OPTIMIZADO)
 # ---------------------------------------
 import zipfile
 import os
 
-@st.cache_data
-def load_data_from_zip(zip_path):
+@st.cache_data(show_spinner="Cargando datos...")
+def load_and_merge_zips(zip_paths):
     dfs = []
 
-    with zipfile.ZipFile(zip_path, "r") as z:
-        csv_files = [f for f in z.namelist() if f.endswith(".csv")]
+    for zip_path in zip_paths:
+        with zipfile.ZipFile(zip_path, "r") as z:
+            csv_files = [f for f in z.namelist() if f.endswith(".csv")]
 
-        if len(csv_files) == 0:
-            st.error(f"No se encontró ningún archivo CSV dentro de {zip_path}")
-            st.stop()
+            if not csv_files:
+                st.error(f"No hay CSV dentro de {zip_path}")
+                st.stop()
 
-        for csv_name in csv_files:
-            with z.open(csv_name) as f:
-                df_tmp = pd.read_csv(f, parse_dates=["date"])
-                dfs.append(df_tmp)
+            for csv_name in csv_files:
+                with z.open(csv_name) as f:
+                    df_tmp = pd.read_csv(
+                        f,
+                        parse_dates=["date"],
+                        low_memory=False
+                    )
+                    dfs.append(df_tmp)
 
     df = pd.concat(dfs, ignore_index=True)
 
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-    df["week"] = df["date"].dt.isocalendar().week.astype(int)
-    df["day_of_week"] = df["date"].dt.dayofweek + 1
+    # 🔥 RIDUZIONE MEMORIA
+    df["store_nbr"] = df["store_nbr"].astype("int16")
+    df["onpromotion"] = df["onpromotion"].astype("int8")
+    df["sales"] = df["sales"].astype("float32")
+    df["transactions"] = df["transactions"].astype("int32")
+
+    # Feature temporali
+    df["year"] = df["date"].dt.year.astype("int16")
+    df["month"] = df["date"].dt.month.astype("int8")
+    df["week"] = df["date"].dt.isocalendar().week.astype("int8")
+    df["day_of_week"] = (df["date"].dt.dayofweek + 1).astype("int8")
 
     return df
 
 
-# ZIP NEL ROOT DEL REPOSITORY
-ZIP_PARTE_1 = "parte_1.zip"
-ZIP_PARTE_2 = "parte_2.zip"
+ZIP_FILES = ["parte_1.zip", "parte_2.zip"]
 
-# Controllo esistenza
-for zip_path in [ZIP_PARTE_1, ZIP_PARTE_2]:
-    if not os.path.exists(zip_path):
-        st.error(f"❌ El archivo {zip_path} no se encuentra en el repositorio")
+for z in ZIP_FILES:
+    if not os.path.exists(z):
+        st.error(f"❌ No se encuentra {z} en el repositorio")
         st.stop()
 
-# Lettura ZIP
-df_parte_1 = load_data_from_zip(ZIP_PARTE_1)
-df_parte_2 = load_data_from_zip(ZIP_PARTE_2)
+df = load_and_merge_zips(ZIP_FILES)
 
-# Merge finale
-df = pd.concat([df_parte_1, df_parte_2], ignore_index=True)
-
-st.success("✅ Dataset parte_1 y parte_2 cargados correctamente")
-st.write("Dimensión total del dataset:", df.shape)
-
+st.success("✅ Datos cargados correctamente")
+st.write("Tamaño del dataset:", df.shape)
 
 # ---------------------------------------
 # TABS
