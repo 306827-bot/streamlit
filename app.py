@@ -281,13 +281,16 @@ with tab3:
         .reset_index()
     )
 
+    # convertimos a string y ordenamos para visualización
     top_stores["store_nbr"] = top_stores["store_nbr"].astype(str)
+    top_stores = top_stores.sort_values("sales")
 
     st.plotly_chart(
         px.bar(
             top_stores,
-            x="store_nbr",
-            y="sales",
+            x="sales",
+            y="store_nbr",
+            orientation="h",
             text=top_stores["sales"].apply(
                 lambda x: f"{int(x):,}".replace(",", ".")
             ),
@@ -295,15 +298,17 @@ with tab3:
                 "store_nbr": "Tienda",
                 "sales": "Ventas totales"
             },
-            color_discrete_sequence=["#d94801"]  # naranja ejecutivo
+            color_discrete_sequence=["#b30000"]  # rosso scuro, serio
         ).update_layout(
-            xaxis_tickangle=-30,
-            bargap=0.35
+            xaxis_title="Ventas totales",
+            yaxis_title="Tienda",
+            bargap=0.25
         ).update_traces(
             textposition="outside"
         ),
         use_container_width=True
     )
+
 
 
 
