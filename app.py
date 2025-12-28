@@ -273,23 +273,32 @@ with tab3:
 
     st.subheader("Top 10 tiendas con mayores ventas en el estado")
 
+    top_stores = (
+        df_state.groupby("store_nbr")["sales"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
+
+    top_stores["store_nbr"] = top_stores["store_nbr"].astype(str)
+
     st.plotly_chart(
         px.bar(
             top_stores,
             x="store_nbr",
             y="sales",
-            color="sales",
-            color_continuous_scale="OrRd",
             text=top_stores["sales"].apply(
                 lambda x: f"{int(x):,}".replace(",", ".")
             ),
             labels={
                 "store_nbr": "Tienda",
                 "sales": "Ventas totales"
-            }
+            },
+            color_discrete_sequence=["#d94801"]  # naranja ejecutivo
         ).update_layout(
-            bargap=0.35,
-            xaxis_tickangle=-45
+            xaxis_tickangle=-30,
+            bargap=0.35
         ).update_traces(
             textposition="outside"
         ),
@@ -322,18 +331,19 @@ with tab4:
     )
 
     st.plotly_chart(
-        px.imshow(
-            heat,
-            aspect="auto",
-            color_continuous_scale="Turbo",
-            labels=dict(
-                x="Mes",
-                y="Día de la semana",
-                color="Ventas medias"
-            )
-        ),
-        use_container_width=True
+    px.imshow(
+        heat,
+        aspect="auto",
+        color_continuous_scale="Blues",  # 👈 stessa tonalità
+        labels=dict(
+            x="Mes",
+            y="Día de la semana",
+            color="Ventas medias"
+        )
+    ),
+    use_container_width=True
     )
+
 
 
 
