@@ -39,20 +39,30 @@ def load_and_merge_zips(zip_paths):
 
     df = pd.concat(dfs, ignore_index=True)
 
-    # 🔥 RIDUZIONE MEMORIA
-    df["store_nbr"] = df["store_nbr"].astype("int16")
-    df["onpromotion"] = df["onpromotion"].astype("int8")
-    df["sales"] = df["sales"].astype("float32")
-    df["transactions"] = df["transactions"].astype("int32")
+    # 🔥 RIDUZIONE MEMORIA (SAFE)
+df["store_nbr"] = (
+    pd.to_numeric(df["store_nbr"], errors="coerce")
+    .fillna(0)
+    .astype("int16")
+)
 
-    # Feature temporali
-    df["year"] = df["date"].dt.year.astype("int16")
-    df["month"] = df["date"].dt.month.astype("int8")
-    df["week"] = df["date"].dt.isocalendar().week.astype("int8")
-    df["day_of_week"] = (df["date"].dt.dayofweek + 1).astype("int8")
+df["onpromotion"] = (
+    pd.to_numeric(df["onpromotion"], errors="coerce")
+    .fillna(0)
+    .astype("int8")
+)
 
-    return df
+df["sales"] = (
+    pd.to_numeric(df["sales"], errors="coerce")
+    .fillna(0)
+    .astype("float32")
+)
 
+df["transactions"] = (
+    pd.to_numeric(df["transactions"], errors="coerce")
+    .fillna(0)
+    .astype("int32")
+)
 
 ZIP_FILES = ["parte_1.zip", "parte_2.zip"]
 
