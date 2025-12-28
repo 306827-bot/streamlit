@@ -42,16 +42,17 @@ def load_data_from_zip(zip_path):
     return df
 
 
-ZIP_PARTE_1 = "data/parte_1.zip"
-ZIP_PARTE_2 = "data/parte_2.zip"
+# ZIP NEL ROOT DEL REPOSITORY
+ZIP_PARTE_1 = "parte_1.zip"
+ZIP_PARTE_2 = "parte_2.zip"
 
-# Controllo esistenza ZIP
+# Controllo esistenza
 for zip_path in [ZIP_PARTE_1, ZIP_PARTE_2]:
     if not os.path.exists(zip_path):
         st.error(f"❌ El archivo {zip_path} no se encuentra en el repositorio")
         st.stop()
 
-# Caricamento dataset
+# Lettura ZIP
 df_parte_1 = load_data_from_zip(ZIP_PARTE_1)
 df_parte_2 = load_data_from_zip(ZIP_PARTE_2)
 
@@ -61,11 +62,12 @@ df = pd.concat([df_parte_1, df_parte_2], ignore_index=True)
 st.success("✅ Dataset parte_1 y parte_2 cargados correctamente")
 st.write("Dimensión total del dataset:", df.shape)
 
+
 # ---------------------------------------
 # TABS
 # ---------------------------------------
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["🌍 Visión Global", "🏪 Por Tienda", "🌎 Por Estado", "✨ Extra"]
+    [" Visión Global", " Por Tienda", " Por Estado", " Extra"]
 )
 
 # =======================================
