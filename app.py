@@ -127,11 +127,11 @@ with tab1:
         use_container_width=True
     )
 
-    # PROMOCIONES – CAMBIO A BARRAS VERTICALES
-    st.subheader("Top 10 tiendas con mayores ventas en promoción")
+    # VENTAS TOTALES – BARRAS VERTICALES
+    st.subheader("Top 10 tiendas con mayores ventas en el estado")
 
-    promo_sales_store = (
-        df[df["onpromotion"] == 1]
+    sales_store = (
+        df_state
         .groupby("store_nbr")["sales"]
         .sum()
         .sort_values(ascending=False)
@@ -139,19 +139,30 @@ with tab1:
         .reset_index()
     )
 
+    # 🔑 Forziamo store_nbr come stringa per evitare assi numerici
+    sales_store["store_nbr"] = sales_store["store_nbr"].astype(str)
+
     st.plotly_chart(
         px.bar(
-            promo_sales_store,
+            sales_store,
             x="store_nbr",
             y="sales",
             color="sales",
             color_continuous_scale="Reds",
-            text=promo_sales_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+            text=sales_store["sales"].apply(
+                lambda x: f"{x:,.0f}".replace(",", ".")
+            ),
+            labels={
+                "store_nbr": "Tienda",
+                "sales": "Ventas totales"
+            }
+        ).update_traces(
+            textposition="outside"
         ),
         use_container_width=True
     )
 
-    st.markdown("---")
+st.markdown("---")
 
     # Estacionalidad
     st.subheader("Estacionalidad de las ventas")
