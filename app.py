@@ -11,7 +11,7 @@ st.set_page_config(page_title="Dashboard de Ventas", layout="wide")
 st.title("📊 Dashboard de Ventas – Vista Ejecutiva")
 
 # ---------------------------------------
-# CARGA DATASET DESDE DOS ZIP (SIMPLE Y ROBUSTO)
+# CARGA DATASET DESDE DOS ZIP
 # ---------------------------------------
 @st.cache_data(show_spinner="Cargando datos...")
 def load_and_merge_zips(zip_paths):
@@ -32,7 +32,7 @@ def load_and_merge_zips(zip_paths):
 
     df = pd.concat(dfs, ignore_index=True)
 
-    # Limpieza mínima (SIN cast a int)
+    # Limpieza mínima
     df["onpromotion"] = df["onpromotion"].fillna(0)
     df["transactions"] = df["transactions"].fillna(0)
 
@@ -56,7 +56,6 @@ df = load_and_merge_zips(ZIP_FILES)
 
 st.success("✅ Datos cargados correctamente")
 st.write("Tamaño del dataset:", df.shape)
-
 
 # ---------------------------------------
 # TABS
@@ -110,10 +109,13 @@ with tab1:
         use_container_width=True
     )
 
-    # Ventas por tienda
+    st.markdown("---")
+
+    # Distribución ventas por tienda (global)
     st.subheader("Distribución de ventas por tienda")
 
     sales_by_store = df.groupby("store_nbr")["sales"].sum().reset_index()
+    sales_by_store["store_nbr"] = sales_by_store["store_nbr"].astype(str)
 
     st.plotly_chart(
         px.bar(
@@ -121,48 +123,12 @@ with tab1:
             x="store_nbr",
             y="sales",
             color="sales",
-            color_continuous_scale="Viridis",
-            text=sales_by_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+            color_continuous_scale="Viridis"
         ),
         use_container_width=True
     )
 
-    # VENTAS TOTALES – BARRAS VERTICALES
-    st.subheader("Top 10 tiendas con mayores ventas en el estado")
-
-    sales_store = (
-        df_state
-        .groupby("store_nbr")["sales"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-        .reset_index()
-    )
-
-    # 🔑 Forziamo store_nbr come stringa per evitare assi numerici
-    sales_store["store_nbr"] = sales_store["store_nbr"].astype(str)
-
-    st.plotly_chart(
-        px.bar(
-            sales_store,
-            x="store_nbr",
-            y="sales",
-            color="sales",
-            color_continuous_scale="Reds",
-            text=sales_store["sales"].apply(
-                lambda x: f"{x:,.0f}".replace(",", ".")
-            ),
-            labels={
-                "store_nbr": "Tienda",
-                "sales": "Ventas totales"
-            }
-        ).update_traces(
-            textposition="outside"
-        ),
-        use_container_width=True
-    )
-
-st.markdown("---")
+    st.markdown("---")
 
     # Estacionalidad
     st.subheader("Estacionalidad de las ventas")
@@ -180,25 +146,10 @@ st.markdown("---")
             dow,
             x="day_name",
             y="sales",
-            color="sales",
-            text=dow["sales"].apply(lambda x: f"{x:,.1f}".replace(",", "."))
+            color="sales"
         ),
         use_container_width=True
     )
-
-    weekly_avg = df.groupby("week")["sales"].mean().reset_index()
-    st.plotly_chart(px.bar(weekly_avg, x="week", y="sales"), use_container_width=True)
-
-    month_map = {
-        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
-        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
-        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
-    }
-
-    monthly = df.groupby("month")["sales"].mean().reset_index()
-    monthly["month_name"] = monthly["month"].map(month_map)
-
-    st.plotly_chart(px.bar(monthly, x="month_name", y="sales"), use_container_width=True)
 
 # =======================================
 # TAB 2: POR TIENDA
@@ -223,7 +174,6 @@ with tab2:
 with tab3:
     st.header("Análisis por estado")
 
-    # Selezione stato (QUESTO MANCAVA)
     state = st.selectbox(
         "Selecciona un estado",
         sorted(df["state"].dropna().unique())
@@ -231,19 +181,10 @@ with tab3:
 
     df_state = df[df["state"] == state]
 
-    st.info(
-        "ℹ️ Algunos estados presentan menos datos debido a la cobertura "
-        "del dataset original."
-    )
+    st.markdown("---")
 
-    # -------------------------------
-    # Transacciones por año
-    # -------------------------------
-    trans_year = (
-        df_state.groupby("year")["transactions"]
-        .sum()
-        .reset_index()
-    )
+    # Evolución transacciones
+    trans_year = df_state.groupby("year")["transactions"].sum().reset_index()
 
     st.subheader(f"Evolución anual de las transacciones – {state}")
 
@@ -253,35 +194,14 @@ with tab3:
             x="year",
             y="transactions",
             color="transactions",
-            color_continuous_scale="Teal",
-            text=trans_year["transactions"].apply(
-                lambda x: f"{int(x):,}".replace(",", ".")
-            ),
-            labels={
-                "year": "Año",
-                "transactions": "Número de transacciones"
-            }
-        ).update_layout(
-            bargap=0.25
-        ).update_traces(
-            textposition="outside"
+            color_continuous_scale="Teal"
         ),
         use_container_width=True
     )
 
     st.markdown("---")
 
-    # -------------------------------
-    # Top 10 tiendas
-    # -------------------------------
-    top_stores = (
-        df_state.groupby("store_nbr")["sales"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-        .reset_index()
-    )
-
+    # Top 10 tiendas (VERTICAL, COME PROMOCIONES)
     st.subheader("Top 10 tiendas con mayores ventas en el estado")
 
     top_stores = (
@@ -292,36 +212,19 @@ with tab3:
         .reset_index()
     )
 
-    # convertimos a string y ordenamos para visualización
     top_stores["store_nbr"] = top_stores["store_nbr"].astype(str)
-    top_stores = top_stores.sort_values("sales")
 
     st.plotly_chart(
         px.bar(
             top_stores,
-            x="sales",
-            y="store_nbr",
-            orientation="h",
-            text=top_stores["sales"].apply(
-                lambda x: f"{int(x):,}".replace(",", ".")
-            ),
-            labels={
-                "store_nbr": "Tienda",
-                "sales": "Ventas totales"
-            },
-            color_discrete_sequence=["#b30000"]  # rosso scuro, serio
-        ).update_layout(
-            xaxis_title="Ventas totales",
-            yaxis_title="Tienda",
-            bargap=0.25
-        ).update_traces(
-            textposition="outside"
-        ),
+            x="store_nbr",
+            y="sales",
+            color="sales",
+            color_continuous_scale="Reds",
+            text=top_stores["sales"].apply(lambda x: f"{int(x):,}".replace(",", "."))
+        ).update_traces(textposition="outside"),
         use_container_width=True
     )
-
-
-
 
 # =======================================
 # TAB 4: EXTRA
@@ -330,6 +233,12 @@ with tab4:
     st.header("Patrones de venta: visión avanzada")
 
     st.subheader("Mapa de calor: ventas medias por día y mes")
+
+    month_map = {
+        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+    }
 
     pivot = (
         df.groupby(["month", "day_of_week"])["sales"]
@@ -340,27 +249,18 @@ with tab4:
     pivot["Mes"] = pivot["month"].map(month_map)
     pivot["Día"] = pivot["day_of_week"].map(day_map)
 
-    heat = pivot.pivot(
-        index="Día",
-        columns="Mes",
-        values="sales"
-    )
+    heat = pivot.pivot(index="Día", columns="Mes", values="sales")
 
     st.plotly_chart(
-    px.imshow(
-        heat,
-        aspect="auto",
-        color_continuous_scale="Blues",  # 👈 stessa tonalità
-        labels=dict(
-            x="Mes",
-            y="Día de la semana",
-            color="Ventas medias"
-        )
-    ),
-    use_container_width=True
+        px.imshow(
+            heat,
+            aspect="auto",
+            color_continuous_scale="Blues",
+            labels=dict(
+                x="Mes",
+                y="Día de la semana",
+                color="Ventas medias"
+            )
+        ),
+        use_container_width=True
     )
-
-
-
-
-
