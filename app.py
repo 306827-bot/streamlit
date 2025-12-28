@@ -109,13 +109,10 @@ with tab1:
         use_container_width=True
     )
 
-    st.markdown("---")
-
-    # Distribución ventas por tienda (global)
+    # Ventas por tienda
     st.subheader("Distribución de ventas por tienda")
 
     sales_by_store = df.groupby("store_nbr")["sales"].sum().reset_index()
-    sales_by_store["store_nbr"] = sales_by_store["store_nbr"].astype(str)
 
     st.plotly_chart(
         px.bar(
@@ -123,7 +120,32 @@ with tab1:
             x="store_nbr",
             y="sales",
             color="sales",
-            color_continuous_scale="Viridis"
+            color_continuous_scale="Viridis",
+            text=sales_by_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
+        ),
+        use_container_width=True
+    )
+
+    # PROMOCIONES – CAMBIO A BARRAS VERTICALES
+    st.subheader("Top 10 tiendas con mayores ventas en promoción")
+
+    promo_sales_store = (
+        df[df["onpromotion"] == 1]
+        .groupby("store_nbr")["sales"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
+
+    st.plotly_chart(
+        px.bar(
+            promo_sales_store,
+            x="store_nbr",
+            y="sales",
+            color="sales",
+            color_continuous_scale="Reds",
+            text=promo_sales_store["sales"].apply(lambda x: f"{x:,.0f}".replace(",", "."))
         ),
         use_container_width=True
     )
@@ -146,10 +168,25 @@ with tab1:
             dow,
             x="day_name",
             y="sales",
-            color="sales"
+            color="sales",
+            text=dow["sales"].apply(lambda x: f"{x:,.1f}".replace(",", "."))
         ),
         use_container_width=True
     )
+
+    weekly_avg = df.groupby("week")["sales"].mean().reset_index()
+    st.plotly_chart(px.bar(weekly_avg, x="week", y="sales"), use_container_width=True)
+
+    month_map = {
+        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+    }
+
+    monthly = df.groupby("month")["sales"].mean().reset_index()
+    monthly["month_name"] = monthly["month"].map(month_map)
+
+    st.plotly_chart(px.bar(monthly, x="month_name", y="sales"), use_container_width=True)
 
 # =======================================
 # TAB 2: POR TIENDA
